@@ -12,7 +12,7 @@ This project requires **Python 3.8+** and CUDA 11.8 for GPU acceleration (if usi
 ### 1. Clone the repository
 
 ```bash
-git clone 
+git clone https://github.com/zhoujy22/DeepSeq3.git
 cd <your-repo-directory>
 ```
 
