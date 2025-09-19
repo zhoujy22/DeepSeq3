@@ -1,3 +1,8 @@
 # DeepSeq3
-This is the original code for running DeepSeq3
-for quick start, you could simply add your data to raw_data folder and run ds3.sh
+
+DeepSeq3 is a tool for deep sequence analysis.  
+This repository provides a quick start workflow: simply prepare your data and run the provided script.
+
+---
+
+## Project Structure
