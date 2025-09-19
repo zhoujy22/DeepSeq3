@@ -27,11 +27,11 @@ pip install -r requirements.txt
 
 ## Preparing datasets for specific experiments
 
-# For comgraph experiments
+For comgraph experiments
 ```bash
 python src/prepare_dataset_comgraph.py
 ```
-# For SNG experiments
+For SNG experiments
 ```bash
 python src/prepare_dataset_sng.py
 ```
