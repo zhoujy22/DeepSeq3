@@ -41,7 +41,6 @@ int logic(int gate_type, const vector<int>& inputs,
     return 0;
 }
 
-// -------- 单步仿真（给定当前状态 + 当前PI组合） --------
 int step_with_given_inputs(
     const vector<pair<int,int>>& x_data,
     const vector<int>& PI_indexes,
@@ -54,19 +53,16 @@ int step_with_given_inputs(
 ) {
     vector<int> state(x_data.size(), -1);
 
-    // 初始化 DFF 输出
     int k = 0;
     for (int idx = 0; idx < (int)x_data.size(); idx++) {
         if (x_data[idx].second == gate_to_index.at("DFF")) {
             state[idx] = curr_state_bits[k++];
         }
     }
-    // 初始化 PI
     for (int i = 0; i < (int)PI_indexes.size(); i++) {
         state[PI_indexes[i]] = pi_bits[i];
     }
 
-    // 按拓扑顺序模拟
     for (int level = 1; level < (int)level_list.size(); level++) {
         for (int node_idx : level_list[level]) {
             vector<int> inputs;
@@ -81,7 +77,6 @@ int step_with_given_inputs(
         }
     }
 
-    // 收集下一状态（DFF的输出）
     vector<int> result;
     for (int idx = 0; idx < (int)x_data.size(); idx++) {
         if (x_data[idx].second == gate_to_index.at("DFF")) {
@@ -90,8 +85,40 @@ int step_with_given_inputs(
     }
     return bin_array_to_dec(result);
 }
+// -------- 修改后的单步转移（只计算第一行） --------
+vector<double> simulate_first_row(
+    const vector<pair<int, int>>& x_data,
+    const vector<int>& PI_indexes,
+    const vector<vector<int>>& level_list,
+    const vector<vector<int>>& fanin_list,
+    const unordered_map<string, int>& gate_to_index,
+    const unordered_map<int, string>& idx2name,
+    int number
+) {
+    int S = 1 << number;
+    int M = 1 << PI_indexes.size() > 1024 ? 1024 : (1 << PI_indexes.size());
+    vector<double> mat_row(S, 0);
 
-// -------- BFS可达性：返回某一行 --------
+    // 只需要计算 s=0 这一行
+    vector<int> curr_bits = dec_to_bin_array(0, number);
+    for (int pi_val = 0; pi_val < M; pi_val++) {
+        vector<int> pi_bits = random_pattern_generator(PI_indexes.size());
+        int ns = step_with_given_inputs(
+            x_data, PI_indexes, level_list, fanin_list,
+            gate_to_index, idx2name, curr_bits, pi_bits
+        );
+        mat_row[ns] += 1.0;
+    }
+
+    double sum = std::accumulate(mat_row.begin(), mat_row.end(), 0.0);
+    if (sum != 0.0) {
+        for (auto& val : mat_row) {
+            val /= sum;
+        }
+    }
+
+    return mat_row;
+}
 vector<int> reachability_row(
     const vector<pair<int,int>>& x_data,
     const vector<int>& PI_indexes,
@@ -109,7 +136,7 @@ vector<int> reachability_row(
     reachable[start_state] = 1;
     q.push(start_state);
 
-    int max_patterns = min(1 << PI_indexes.size(), 1024); // 限制输入模式数
+    int max_patterns = min(1 << PI_indexes.size(), 1024); 
 
     while (!q.empty()) {
         int curr = q.front(); q.pop();
@@ -138,6 +165,10 @@ vector<int> reachability_row(
 // -------- Python绑定 --------
 PYBIND11_MODULE(fsm_simulator, m) {
     m.doc() = "FSM simulator with BFS reachability (single row)";
+    m.def("simulate_one_step_matrix", &simulate_first_row,
+          py::arg("x_data"), py::arg("PI_indexes"), py::arg("level_list"),
+          py::arg("fanin_list"), py::arg("gate_to_index"), py::arg("idx2name"),
+          py::arg("number"));
     m.def("reachability_row", &reachability_row,
           py::arg("x_data"), py::arg("PI_indexes"), py::arg("level_list"),
           py::arg("fanin_list"), py::arg("gate_to_index"), py::arg("idx2name"),
